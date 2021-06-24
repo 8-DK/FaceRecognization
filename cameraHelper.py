@@ -15,6 +15,7 @@ class CameraHeler:
     userInfo = {}
     userNames = []
     userIds = []
+    processThisId =[]
     lastUserId = 1;
     
     __shared_instance = 'cameraHelper'

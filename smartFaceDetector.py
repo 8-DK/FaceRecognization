@@ -29,6 +29,7 @@ def main():
             minSize = (int(camHelper.minW), int(camHelper.minH)),
            )
 
+        detectedPersons = []
         for(x,y,w,h) in faces:
 
             cv2.rectangle(img, (x,y), (x+w,y+h), (0,255,0), 2)
@@ -44,12 +45,12 @@ def main():
                 confidence = "  {0}%".format(round(100 - confidence))
             
             cv2.putText(img, str(id), (x+5,y-5), camHelper.font, 1, (255,255,255), 2)
-            cv2.putText(img, str(confidence), (x+5,y+h-5), camHelper.font, 1, (255,255,0), 1)  
+            cv2.putText(img, str(confidence), (x+5,y+h-5), camHelper.font, 1, (255,255,0), 1)              
         
         resize = camHelper.ResizeWithAspectRatio(img, width=300)
         cv2.imshow('camera',resize) 
 
-        keyPress = chr(cv2.waitKey(10) & 0xff) # Press 'ESC' for exiting video
+        keyPress = chr(cv2.waitKey(10) & 0xff) # Press 'ESC' for exiting video        
         if (keyPress == 't') or (keyPress == 'T'): #start training
             speak("Start data set training. Please wait while training is completed.")
             trainingHlpr.startTraining()
