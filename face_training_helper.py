@@ -12,8 +12,10 @@ class TrainingHeler():
     path = 'dataset'
     recognizer = cv2.face.LBPHFaceRecognizer_create()
     detector = 0
-
-    #def __init__(self):
+    trainingFilePath = ""
+    
+    def __init__(self,trngFilePath):
+        self.trainingFilePath = trngFilePath
     
     def startTraining(self):
         camHlpr = CameraHeler.getInstance()
@@ -21,11 +23,15 @@ class TrainingHeler():
         speak("Training faces. It will take a few seconds. Wait.")        
         print ("\n [INFO] Training faces. It will take a few seconds. Wait ...")
         faces,ids = self.getImagesAndLabels(self.path)
-        camHlpr.recognizer.train(faces, np.array(ids))
+        if(len(np.unique(ids)) > 0):
+            camHlpr.recognizer.train(faces, np.array(ids))
+        else:
+            speak("No faces found in database. Please capture new photos")
+            return
 
         # Save the model into trainer/trainer.yml
-        camHlpr.recognizer.write('trainer/trainer.yml') # recognizer.save() worked on Mac, but not on Pi
-
+        camHlpr.recognizer.write(self.trainingFilePath) # recognizer.save() worked on Mac, but not on Pi
+        camHlpr.updateTrainingFile();
         # Print the numer of faces trained and end program
         print("\n [INFO] {0} faces trained. Exiting Program".format(len(np.unique(ids))))
         

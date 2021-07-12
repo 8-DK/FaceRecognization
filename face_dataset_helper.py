@@ -3,6 +3,9 @@ import os
 import time
 import threading
 from cameraHelper import *
+import ctypes
+from voiceHelper import *
+
 
 # Define the thread that will continuously pull frames from the camera
 class CameraBufferCleanerThread(threading.Thread):
@@ -11,7 +14,14 @@ class CameraBufferCleanerThread(threading.Thread):
         self.last_frame = None
         super(CameraBufferCleanerThread, self).__init__(name=name)
         self.start()
-
+        
+    def get_id(self):    
+        # returns id of the respective thread
+        if hasattr(self, '_thread_id'):
+            return self._thread_id
+        for id, thread in threading._active.items():
+            if thread is self:
+                return id
     def run(self):
         while True:
             ret, self.last_frame = self.camera.read()
@@ -34,6 +44,8 @@ class FaseDatasetHelper:
         self.camHlpr = CameraHeler.getInstance()                
     
     def startCapturing(self,userId,userName):
+        speak("User Id "+str(userId)+", with User name "+userName+". is being register in database.")
+        speak("Press S for save current progress. Press N for capture new image.")
         print("\n [INFO] User Id : "+str(userId)+", User name : "+userName)
         print("\n [INFO] Initializing face capture. Look the camera and wait ...")
         count = 0
@@ -43,7 +55,7 @@ class FaseDatasetHelper:
             #ret, img = cam.read()
             if self.cam_cleaner.last_frame is not None:
                 img = self.cam_cleaner.last_frame
-                cv2.imshow('image', img)
+                cv2.imshow('New Face', img)
                 #img = cv2.flip(img, -1) # flip video image vertically
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 faces = self.camHlpr.faceCascade.detectMultiScale(gray, 1.3, 5)
@@ -66,6 +78,7 @@ class FaseDatasetHelper:
                 
                 if (keyPress  == 83) or (keyPress == 115): #s or S
                     print("S key pressed")
+                    self.camHlpr.addUserToJson(userId,userName)
                     break
                 elif (keyPress == 78) or (keyPress == 110): #n or N
                     print("N key pressed")
@@ -73,7 +86,9 @@ class FaseDatasetHelper:
                 elif count >= 30: # Take 30 face sample and stop video
                      self.camHlpr.addUserToJson(userId,userName)
                      break    
-        # Do a bit of cleanup        
+        # Do a bit of cleanup
+        cv2.destroyWindow("New Face")
         print("\n [INFO] Exiting Program and cleanup stuff")
         self.cam_cleaner.raise_exception()
         self.cam_cleaner.join()
+        speak("User is registered in database.")

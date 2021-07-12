@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import time
 from cameraHelper import *
 from face_dataset_helper import *
 from face_training_helper import *
@@ -9,9 +10,11 @@ from voiceHelper import *
 CameraUrl = "rtsp://192.168.1.45:5554"
 TrainingFilPath = "trainer/trainer.yml"
 
-camHelper = CameraHeler(CameraUrl,TrainingFilPath)
+#camHelper = CameraHeler(CameraUrl,TrainingFilPath)
+camHelper = CameraHeler(0)
+
 datasetHlpr = FaseDatasetHelper()
-trainingHlpr = TrainingHeler()
+trainingHlpr = TrainingHeler(TrainingFilPath)
 
 def main():
     speak("Welcome to smart doorbell")
@@ -30,22 +33,33 @@ def main():
            )
 
         detectedPersons = []
+        lastUserDetected = ""
         for(x,y,w,h) in faces:
 
             cv2.rectangle(img, (x,y), (x+w,y+h), (0,255,0), 2)
+            id = -1
+            confidence = 100
+            if(camHelper.isTrainingFilePresent):
+                id, confidence = camHelper.predict(gray[y:y+h,x:x+w])
 
-            id, confidence = camHelper.predict(gray[y:y+h,x:x+w])
-
-            # Check if confidence is less them 100 ==> "0" is perfect match 
+            # Check if confidence is less them 100 ==> "0" is perfect match
+            print("Current user id:"+str(id))
             if (confidence < 100):
-                id = camHelper.userNames[id]
+                if(len(camHelper.userNames)):                    
+                    lastUserDetected = camHelper.userNames[id-1]
                 confidence = "  {0}%".format(round(100 - confidence))
             else:
-                id = "unknown"
+                id = -1
                 confidence = "  {0}%".format(round(100 - confidence))
             
-            cv2.putText(img, str(id), (x+5,y-5), camHelper.font, 1, (255,255,255), 2)
+            cv2.putText(img, lastUserDetected, (x+5,y-5), camHelper.font, 1, (255,255,255), 2)
             cv2.putText(img, str(confidence), (x+5,y+h-5), camHelper.font, 1, (255,255,0), 1)              
+        
+        if(lastUserDetected  != "unknown") and (lastUserDetected  != "" and (id != -1)):
+            print(str(time.time()-camHelper.getLastVisitedTime(id,lastUserDetected)))
+            if( (time.time()-camHelper.getLastVisitedTime(id,lastUserDetected)) > 5):            
+                camHelper.setLastVisitedTime(id,time.time())
+                speak("Welcome "+lastUserDetected )
         
         resize = camHelper.ResizeWithAspectRatio(img, width=300)
         cv2.imshow('camera',resize) 
@@ -53,12 +67,14 @@ def main():
         keyPress = chr(cv2.waitKey(10) & 0xff) # Press 'ESC' for exiting video        
         if (keyPress == 't') or (keyPress == 'T'): #start training
             speak("Start data set training. Please wait while training is completed.")
-            trainingHlpr.startTraining()
-            break
+            trainingHlpr.startTraining()            
         if (keyPress == 'c') or (keyPress == 'C'): #capture new photo
-            speak("Inter name of new user, who you wish to register.")
+            speak("Enter name of new user, who you wish to register.")
             val = input("Inter name of new user -> ")
-            datasetHlpr.startCapturing(camHelper.lastUserId,val)
+            if(val != ""):
+                datasetHlpr.startCapturing(camHelper.lastUserId,val)
+            else:
+                speak("No name enterd.")
 
     # Do a bit of cleanup
     print("\n [INFO] Exiting Program and cleanup stuff")
